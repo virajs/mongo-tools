@@ -198,6 +198,11 @@ func (restore *MongoRestore) RestoreIntent(intent *intents.Intent) error {
 // RestoreCollectionToDB pipes the given BSON data into the database.
 func (restore *MongoRestore) RestoreCollectionToDB(dbName, colName string, bsonSource *db.DecodedBSONSource, fileSize int64) error {
 
+	writeCommands, err := restore.SessionProvider.SupportsWriteCommands()
+	if err != nil {
+		return fmt.Errorf("error checking for write commands support: %v", err)
+	}
+
 	session, err := restore.SessionProvider.GetSession()
 	if err != nil {
 		return fmt.Errorf("error establishing connection: %v", err)
@@ -237,7 +242,28 @@ func (restore *MongoRestore) RestoreCollectionToDB(dbName, colName string, bsonS
 
 	for i := 0; i < MaxInsertThreads; i++ {
 		go func() {
-			bulk := db.NewBufferedBulkInserter(collection, restore.ToolOptions.BulkBufferSize, !restore.OutputOptions.StopOnError)
+
+			var bi db.BulkInserter
+			if writeCommands {
+				writeConcern := bson.M{}
+				if restore.safety == nil {
+					writeConcern["w"] = 0
+				} else {
+					if restore.safety.WMode == "majority" {
+						writeConcern["w"] = "majority"
+					} else {
+						writeConcern["w"] = restore.safety.W
+					}
+				}
+				bi = db.NewWriteCommandBulk(collection, !restore.OutputOptions.StopOnError, writeConcern)
+			} else {
+				bi = db.NewLegacyBulk(collection, !restore.OutputOptions.StopOnError)
+			}
+			maxDocs := restore.ToolOptions.BulkBufferSize
+			if !writeCommands {
+				maxDocs = 1
+			}
+			bulk := db.NewBufferedBulkInserter(collection, maxDocs, !restore.OutputOptions.StopOnError, bi)
 			for rawDoc := range docChan {
 				if restore.objCheck {
 					err := bson.Unmarshal(rawDoc.Data, &bson.D{})
