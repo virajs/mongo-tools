@@ -255,8 +255,10 @@ func (restore *MongoRestore) RestoreCollectionToDB(dbName, colName string, bsonS
 						writeConcern["w"] = restore.safety.W
 					}
 				}
+				fmt.Println("using write commands")
 				bi = db.NewWriteCommandBulk(collection, !restore.OutputOptions.StopOnError, writeConcern)
 			} else {
+				fmt.Println("using legacy")
 				bi = db.NewLegacyBulk(collection, !restore.OutputOptions.StopOnError)
 			}
 			maxDocs := restore.ToolOptions.BulkBufferSize

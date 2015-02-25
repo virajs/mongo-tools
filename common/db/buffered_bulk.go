@@ -54,6 +54,7 @@ func (bb *BufferedBulkInserter) Insert(doc interface{}) error {
 		return fmt.Errorf("bson encoding error: %v", err)
 	}
 	// flush if we are full
+	//fmt.Println(bb.docCount >= bb.docLimit, bb.byteCount+len(rawBytes) > MaxBulkSize, bb.docCount >= BulkDocLimit)
 	if bb.docCount >= bb.docLimit || bb.byteCount+len(rawBytes) > MaxBulkSize || bb.docCount >= BulkDocLimit {
 		err = bb.Flush()
 	}
@@ -73,6 +74,8 @@ func (bb *BufferedBulkInserter) Flush() error {
 	if err := bb.bulk.Run(); err != nil {
 		return err
 	}
+	bb.docCount = 0
+	bb.byteCount = 0
 	return nil
 }
 
@@ -158,7 +161,6 @@ func (wcb *WriteCommandBulk) Insert(d interface{}) {
 }
 
 func (wcb *WriteCommandBulk) Run() error {
-	fmt.Println("len", len(wcb.docs))
 	restoreDoc := bson.D{
 		bson.DocElem{"insert", wcb.c.Name},
 		bson.DocElem{"ordered", !wcb.unordered},
