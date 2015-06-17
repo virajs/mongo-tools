@@ -428,14 +428,21 @@ func (dump *MongoDump) DumpIntent(intent *intents.Intent) error {
 		return dump.dumpQueryToWriter(findQuery, intent)
 	}
 
+	dest := intent.BSONPath
+	if dump.OutputOptions.Archive == "-" {
+		dest = "stdout"
+	} else if dump.OutputOptions.Archive != "" {
+		dest = fmt.Sprintf("archive '%v'", dump.OutputOptions.Archive)
+	}
+
 	if !dump.OutputOptions.Repair {
-		log.Logf(log.Always, "writing %v to %v", intent.Namespace(), intent.BSONPath)
+		log.Logf(log.Always, "writing %v to %v", intent.Namespace(), dest)
 		if err = dump.dumpQueryToWriter(findQuery, intent); err != nil {
 			return err
 		}
 	} else {
 		// handle repairs as a special case, since we cannot count them
-		log.Logf(log.Always, "writing repair of %v to %v", intent.Namespace(), intent.BSONPath)
+		log.Logf(log.Always, "writing repair of %v to %v", intent.Namespace(), dest)
 		repairIter := session.DB(intent.DB).C(intent.C).Repair()
 		repairCounter := progress.NewCounter(1) // this counter is ignored
 		if err := dump.dumpIterToWriter(repairIter, intent.BSONFile, repairCounter); err != nil {
@@ -445,7 +452,7 @@ func (dump *MongoDump) DumpIntent(intent *intents.Intent) error {
 			"\trepair cursor found %v documents in %v", repairCounter, intent.Namespace())
 	}
 
-	// don't dump metatdata for SystemIndexes collection
+	// don't dump metadata for SystemIndexes collection
 	if intent.IsSystemIndexes() {
 		return nil
 	}
