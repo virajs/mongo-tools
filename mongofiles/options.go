@@ -41,3 +41,8 @@ type StorageOptions struct {
 func (_ *StorageOptions) Name() string {
 	return "storage"
 }
+
+// InputOptions defines the set of options to use in retrieving data from the server.
+type InputOptions struct {
+	ReadPreference string `long:"readPreference" value-name:"<string>|<json>" description:"either a preference namme like 'primary' or a preference object like {'mode':'nearest',tags:[{'dc':'east'}]}"`
+}
