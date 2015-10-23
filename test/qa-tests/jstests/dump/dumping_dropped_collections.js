@@ -37,9 +37,7 @@ if (typeof getToolTest === 'undefined') {
 
 
   // dump 
-  var dumpArgs = ['dump'].
-      concat(getDumpTarget()).
-      concat(commonToolArgs);
+  var dumpArgs = ['dump'].concat(getDumpTarget()).concat(commonToolArgs);
 
   assert(toolTest.runTool.apply(toolTest, dumpArgs) == 0, 'mongodump should not crash when dumping collections that gets dropped');
 

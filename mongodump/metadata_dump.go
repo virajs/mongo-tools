@@ -65,7 +65,7 @@ func (dump *MongoDump) dumpMetadata(intent *intents.Intent) error {
 		return err
 	}
 	if indexesIter == nil {
-		log.Logf(log.Always, "the collection %v.%v appears to have been dropped after the dump started", intent.DB, intent.C)
+		log.Logf(log.Always, "the collection %v appears to have been dropped after the dump started", intent.Namespace())
 		return nil
 	}
 
