@@ -2,6 +2,7 @@ package mongorestore
 
 import (
 	"fmt"
+	"github.com/mongodb/mongo-tools/common/archive"
 	"github.com/mongodb/mongo-tools/common/db"
 	"github.com/mongodb/mongo-tools/common/intents"
 	"github.com/mongodb/mongo-tools/common/log"
@@ -9,7 +10,6 @@ import (
 	"github.com/mongodb/mongo-tools/common/util"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -40,9 +40,9 @@ func (restore *MongoRestore) RestoreIntents() error {
 				var ioBuf []byte
 				for {
 					intent := restore.manager.Pop() // this has BSONFile, if it's an 'archive' it needs a buffer
-					if castBSONFile, ok := reflect.ValueOf(intent.BSONFile).(*FileNeedsIOBuffer); ok {
+					if castBSONFile, ok := intent.BSONFile.(*archive.RegularCollectionReceiver); ok {
 						if ioBuf == nil {
-							ioBuf := make([]byte, db.MaxBSONSize)
+							ioBuf = make([]byte, db.MaxBSONSize)
 						}
 						castBSONFile.TakeIOBuffer(ioBuf)
 					}
@@ -58,7 +58,7 @@ func (restore *MongoRestore) RestoreIntents() error {
 						return
 					}
 					restore.manager.Finish(intent)
-					if castBSONFile, ok := reflect.ValueOf(intent.BSONFile).(*FileNeedsIOBuffer); ok {
+					if castBSONFile, ok := intent.BSONFile.(*archive.RegularCollectionReceiver); ok {
 						castBSONFile.ReleaseIOBuffer()
 					}
 
