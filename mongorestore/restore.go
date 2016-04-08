@@ -9,6 +9,7 @@ import (
 	"github.com/mongodb/mongo-tools/common/util"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -35,8 +36,17 @@ func (restore *MongoRestore) RestoreIntents() error {
 		for i := 0; i < restore.OutputOptions.NumParallelCollections; i++ {
 			go func(id int) {
 				log.Logf(log.DebugHigh, "starting restore routine with id=%v", id)
+				//make the buffer here
+				var ioBuf []byte
 				for {
-					intent := restore.manager.Pop()
+					intent := restore.manager.Pop() // this has BSONFile, if it's an 'archive' it needs a buffer
+					if castBSONFile, ok := reflect.ValueOf(intent.BSONFile).(*FileNeedsIOBuffer); ok {
+						if ioBuf == nil {
+							ioBuf := make([]byte, db.MaxBSONSize)
+						}
+						castBSONFile.TakeIOBuffer(ioBuf)
+					}
+					//BSONFile needs to be give this buffer through a handoff
 					if intent == nil {
 						log.Logf(log.DebugHigh, "ending restore routine with id=%v, no more work to do", id)
 						resultChan <- nil // done
@@ -48,6 +58,10 @@ func (restore *MongoRestore) RestoreIntents() error {
 						return
 					}
 					restore.manager.Finish(intent)
+					if castBSONFile, ok := reflect.ValueOf(intent.BSONFile).(*FileNeedsIOBuffer); ok {
+						castBSONFile.ReleaseIOBuffer()
+					}
+
 				}
 			}(i)
 		}

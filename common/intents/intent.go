@@ -14,6 +14,11 @@ type file interface {
 	Pos() int64
 }
 
+type FileNeedsIOBuffer interface {
+	TakeIOBuffer([]byte)
+	ReleaseIOBuffer()
+}
+
 // mongorestore first scans the directory to generate a list
 // of all files to restore and what they map to. TODO comments
 type Intent struct {
