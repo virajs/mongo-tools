@@ -40,17 +40,17 @@ func (restore *MongoRestore) RestoreIntents() error {
 				var ioBuf []byte
 				for {
 					intent := restore.manager.Pop() // this has BSONFile, if it's an 'archive' it needs a buffer
-					if castBSONFile, ok := intent.BSONFile.(*archive.RegularCollectionReceiver); ok {
-						if ioBuf == nil {
-							ioBuf = make([]byte, db.MaxBSONSize)
-						}
-						castBSONFile.TakeIOBuffer(ioBuf)
-					}
 					//BSONFile needs to be give this buffer through a handoff
 					if intent == nil {
 						log.Logf(log.DebugHigh, "ending restore routine with id=%v, no more work to do", id)
 						resultChan <- nil // done
 						return
+					}
+					if castBSONFile, ok := intent.BSONFile.(*archive.RegularCollectionReceiver); ok {
+						if ioBuf == nil {
+							ioBuf = make([]byte, db.MaxBSONSize)
+						}
+						castBSONFile.TakeIOBuffer(ioBuf)
 					}
 					err := restore.RestoreIntent(intent)
 					if err != nil {
