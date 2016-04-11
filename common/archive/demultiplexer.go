@@ -189,7 +189,7 @@ type RegularCollectionReceiver struct {
 	readBufChan      chan<- []byte
 	Intent           *intents.Intent
 	Demux            *Demultiplexer
-	partialReadArray []byte //THIS MAKES ONE EVERYTIME, BUT SHOULD BE A SLICE INSTEAD THAT IS HANDED OFF
+	partialReadArray []byte
 	partialReadBuf   []byte
 	isOpen           bool
 	pos              int64
