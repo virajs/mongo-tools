@@ -2,7 +2,6 @@ package mongorestore
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/archive"
 	"github.com/mongodb/mongo-tools/common/db"
 	"github.com/mongodb/mongo-tools/common/intents"
 	"github.com/mongodb/mongo-tools/common/log"
@@ -36,17 +35,15 @@ func (restore *MongoRestore) RestoreIntents() error {
 		for i := 0; i < restore.OutputOptions.NumParallelCollections; i++ {
 			go func(id int) {
 				log.Logf(log.DebugHigh, "starting restore routine with id=%v", id)
-				//make the buffer here
 				var ioBuf []byte
 				for {
-					intent := restore.manager.Pop() // this has BSONFile, if it's an 'archive' it needs a buffer
-					//BSONFile needs to be give this buffer through a handoff
+					intent := restore.manager.Pop()
 					if intent == nil {
 						log.Logf(log.DebugHigh, "ending restore routine with id=%v, no more work to do", id)
 						resultChan <- nil // done
 						return
 					}
-					if castBSONFile, ok := intent.BSONFile.(*archive.RegularCollectionReceiver); ok {
+					if fileNeedsIOBuffer, ok := intent.BSONFile.(intents.FileNeedsIOBuffer); ok {
 						if ioBuf == nil {
 							ioBuf = make([]byte, db.MaxBSONSize)
 						}
@@ -58,7 +55,7 @@ func (restore *MongoRestore) RestoreIntents() error {
 						return
 					}
 					restore.manager.Finish(intent)
-					if castBSONFile, ok := intent.BSONFile.(*archive.RegularCollectionReceiver); ok {
+					if fileNeedsIOBuffer, ok := intent.BSONFile.(intents.FileNeedsIOBuffer); ok {
 						castBSONFile.ReleaseIOBuffer()
 					}
 
